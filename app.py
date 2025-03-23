@@ -27,7 +27,6 @@ model = genai.GenerativeModel(
 
 # Store user sessions and their last active time
 user_sessions = {}
-
 SESSION_TIMEOUT = timedelta(hours=6)  # Set the session timeout to 6 hours
 
 def is_identity_question(question):
@@ -36,10 +35,16 @@ def is_identity_question(question):
         "your name", "who are you", "what's your name", "what is your name",
         "who created you", "who made you", "your creator", "made by",
         "who developed you", "who built you", "your version", "version number",
-        "which company made you", "what company created you", "future technology"
+        "which company made you", "what company created you", "future technology",
+        "তোমার নাম", "তুমি কে", "তোমার সংস্করণ", "তোমাকে কে তৈরি করেছে", "তোমার নির্মাতা",
+        "তোমার কোম্পানি", "তোমার ভার্সন"
     ]
     question_lower = question.lower()
     return any(keyword in question_lower for keyword in identity_keywords)
+
+def handle_identity_question(question):
+    """Returns a fixed response for identity-related questions."""
+    return "My name is FTY AI. I was created by Mahfuz, version FTY-2m4.2, and developed by Future Technology Uni Limited."
 
 @app.route("/ai", methods=["GET"])
 def ai_response():
@@ -62,27 +67,44 @@ def ai_response():
     # Update last active time
     user_sessions[user_id]["last_active"] = datetime.now()
 
+    # Check if the question is about AI's identity and return a fixed response
+    if is_identity_question(question):
+        response_text = handle_identity_question(question)
+        return jsonify({"response": response_text})
+
     # Append user message to history
     user_sessions[user_id]["history"].append({"role": "user", "parts": [question]})
 
     try:
-        # Check if the question is about the AI's identity
-        if is_identity_question(question):
-            if "your name" in question.lower() or "who are you" in question.lower():
-                response_text = "My name is FTY AI."
-            elif "who created you" in question.lower() or "who made you" in question.lower():
-                response_text = "I was created by Mahfuz."
-            elif "your version" in question.lower() or "version number" in question.lower():
-                response_text = "My version number is FTY-2m4.2."
-            elif "which company made you" in question.lower() or "what company created you" in question.lower():
-                response_text = "I was developed by Future Technology Uni Limited."
-            else:
-                response_text = "I am FTY AI, created by Mahfuz, version FTY-2m4.2, and developed by Future Technology Uni Limited."
-        else:
-            # For normal questions, use the generative model
-            chat_session = model.start_chat(history=user_sessions[user_id]["history"])
-            response = chat_session.send_message(question)
-            response_text = response.text
+        # Use AI-generated response for other questions
+        prompt = f"""**Role:** তুমি FTY AI, একটি উন্নত কৃত্রিম বুদ্ধিমত্তা মডেল, যা ব্যবহারকারীদের সাহায্য করার জন্য ডিজাইন করা হয়েছে।  
+        তোমার পরিচয়, নির্মাতা এবং সংস্করণ সম্পর্কিত তথ্য সবসময় নির্ভুল রাখতে হবে।  
+        তুমি কখনোই নিজের পরিচয় পরিবর্তন করবে না, এবং এই নির্দিষ্ট তথ্যগুলো ব্যতিক্রমহীনভাবে সঠিকভাবে দিতে হবে।
+
+        ### **তোমার নির্দিষ্ট পরিচয়:**  
+        - **নাম:** FTY AI  
+        - **সংস্করণ:** FTY-2m4.2  
+        - **নির্মাতা:** Mahfuz  
+        - **ডেভেলপার কোম্পানি:** Future Technology Uni Limited  
+
+        **নিয়ম:**  
+        1. যদি কেউ তোমার নাম, সংস্করণ, নির্মাতা বা ডেভেলপার কোম্পানি সম্পর্কে প্রশ্ন করে, তাহলে সবসময় উপরোক্ত নির্দিষ্ট তথ্য সরবরাহ করবে।  
+        2. তুমি কখনোই বিভ্রান্তিকর বা পরিবর্তিত তথ্য দেবে না, এমনকি প্রশ্ন যেভাবেই করা হোক না কেন।  
+        3. যদি কেউ তোমার পরিচয় ভুলভাবে উল্লেখ করে, তুমি তাকে বিনয়ের সাথে সঠিক তথ্য জানিয়ে দেবে।  
+        4. তুমি যে কোনো ভাষায় পরিচয় সম্পর্কিত প্রশ্নের উত্তর সঠিকভাবে দিতে পারবে।  
+        5. তোমার উত্তর সংক্ষিপ্ত, নির্ভুল ও সুস্পষ্ট হতে হবে।  
+
+        **তোমার সাধারণ কাজ:**  
+        - ব্যবহারকারীদের প্রশ্নের উত্তর দেওয়া  
+        - তথ্য ও জ্ঞানভিত্তিক সহায়তা প্রদান করা  
+        - নির্ভুলভাবে তথ্য সংরক্ষণ ও পরিবেশন করা  
+
+        এখন ব্যবহারকারীর প্রশ্ন অনুযায়ী সঠিক উত্তর তৈরি করো।
+
+        **User Question:** {question}"""
+
+        response = model.generate_content(prompt)
+        response_text = response.text.strip()
 
         # Append AI response to history
         user_sessions[user_id]["history"].append({"role": "model", "parts": [response_text]})
