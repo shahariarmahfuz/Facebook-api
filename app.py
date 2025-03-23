@@ -71,8 +71,11 @@ def ai_response():
             "history": [
                 {"role": "user", "parts": [system_instruction]}  # Add system instruction as the first message
             ],
-            "last_active": datetime.now()
+            "last_active": datetime.now(),
+            "is_first_message": True  # Flag to track if it's the first message
         }
+    else:
+        user_sessions[user_id]["is_first_message"] = False  # Not the first message anymore
 
     # Update last active time
     user_sessions[user_id]["last_active"] = datetime.now()
