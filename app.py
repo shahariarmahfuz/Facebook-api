@@ -17,7 +17,7 @@ generation_config = {
     "temperature": 0.8,
     "top_p": 0.9,
     "top_k": 30,
-    "max_output_tokens": 300,
+    "max_output_tokens": 500,
     "response_mime_type": "text/plain",
 }
 model = genai.GenerativeModel(
@@ -108,7 +108,7 @@ def clean_inactive_sessions():
 
 def keep_alive():
     """Periodically pings the server to keep it alive."""
-    url = "https://new-ai-buxr.onrender.com/ping"
+    url = "https://facebook-api-1uv3.onrender.com/ping"
     while True:
         time.sleep(300)
         try:
