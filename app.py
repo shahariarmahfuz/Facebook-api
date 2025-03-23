@@ -68,7 +68,9 @@ def ai_response():
     # Initialize session history if user is new
     if user_id not in user_sessions:
         user_sessions[user_id] = {
-            "history": [],
+            "history": [
+                {"role": "user", "parts": [system_instruction]}  # Add system instruction as the first message
+            ],
             "last_active": datetime.now()
         }
 
@@ -86,11 +88,8 @@ def ai_response():
                 "and developed by Future Technology Uni Limited."
             )
         else:
-            # For normal questions, use the generative model with system instruction
-            chat_session = model.start_chat(
-                history=user_sessions[user_id]["history"],
-                system_instruction=system_instruction
-            )
+            # For normal questions, use the generative model
+            chat_session = model.start_chat(history=user_sessions[user_id]["history"])
             response = chat_session.send_message(question)
             response_text = response.text
 
