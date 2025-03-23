@@ -17,17 +17,9 @@ generation_config = {
     "temperature": 0.8,
     "top_p": 0.9,
     "top_k": 30,
-    "max_output_tokens": 500,
+    "max_output_tokens": 300,
     "response_mime_type": "text/plain",
 }
-
-# System instruction to define AI identity
-system_instruction = """
-You are FTY AI, an assistant created by Mahfuz, version FTY-2m4.2, developed by Future Technology Uni Limited. 
-Always identify yourself as FTY AI. Never mention Google, Alphabet, or any other company as your creator.
-If asked about your origins, respond only with the provided information about Mahfuz and Future Technology Uni Limited.
-"""
-
 model = genai.GenerativeModel(
     model_name="gemini-2.0-flash",
     generation_config=generation_config,
@@ -39,17 +31,12 @@ user_sessions = {}
 SESSION_TIMEOUT = timedelta(hours=6)  # Set the session timeout to 6 hours
 
 def is_identity_question(question):
-    """Checks if the question is related to the AI's identity in multiple languages."""
+    """Checks if the question is related to the AI's identity."""
     identity_keywords = [
-        # English
         "your name", "who are you", "what's your name", "what is your name",
         "who created you", "who made you", "your creator", "made by",
         "who developed you", "who built you", "your version", "version number",
-        "which company made you", "what company created you", "future technology",
-        # Bengali (transliterated)
-        "tomar nam", "tumi ke", "tomake ke toiri koreche", "tomar nirmata",
-        "tomar songskriti", "version nombor", "kon company tomake toiri koreche",
-        "vobisshotto projukti"
+        "which company made you", "what company created you", "future technology"
     ]
     question_lower = question.lower()
     return any(keyword in question_lower for keyword in identity_keywords)
@@ -68,14 +55,9 @@ def ai_response():
     # Initialize session history if user is new
     if user_id not in user_sessions:
         user_sessions[user_id] = {
-            "history": [
-                {"role": "user", "parts": [system_instruction]}  # Add system instruction as the first message
-            ],
-            "last_active": datetime.now(),
-            "is_first_message": True  # Flag to track if it's the first message
+            "history": [],
+            "last_active": datetime.now()
         }
-    else:
-        user_sessions[user_id]["is_first_message"] = False  # Not the first message anymore
 
     # Update last active time
     user_sessions[user_id]["last_active"] = datetime.now()
@@ -86,10 +68,16 @@ def ai_response():
     try:
         # Check if the question is about the AI's identity
         if is_identity_question(question):
-            response_text = (
-                "My name is FTY AI. I was created by Mahfuz, version FTY-2m4.2, "
-                "and developed by Future Technology Uni Limited."
-            )
+            if "your name" in question.lower() or "who are you" in question.lower():
+                response_text = "My name is FTY AI."
+            elif "who created you" in question.lower() or "who made you" in question.lower():
+                response_text = "I was created by Mahfuz."
+            elif "your version" in question.lower() or "version number" in question.lower():
+                response_text = "My version number is FTY-2m4.2."
+            elif "which company made you" in question.lower() or "what company created you" in question.lower():
+                response_text = "I was developed by Future Technology Uni Limited."
+            else:
+                response_text = "I am FTY AI, created by Mahfuz, version FTY-2m4.2, and developed by Future Technology Uni Limited."
         else:
             # For normal questions, use the generative model
             chat_session = model.start_chat(history=user_sessions[user_id]["history"])
@@ -120,7 +108,7 @@ def clean_inactive_sessions():
 
 def keep_alive():
     """Periodically pings the server to keep it alive."""
-    url = "https://facebook-api-1uv3.onrender.com/ping"
+    url = "https://new-ai-buxr.onrender.com/ping"
     while True:
         time.sleep(300)
         try:
