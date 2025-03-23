@@ -10,11 +10,29 @@ app = Flask(__name__)
 API_KEY = os.getenv("GENAI_API_KEY", "AIzaSyDaUj3swtOdBHSu-Jm_hP6nQuDiALHgsTY")
 genai.configure(api_key=API_KEY)
 
-# জেনারিক মডেল সেটআপ
 model = genai.GenerativeModel('gemini-2.0-flash')
 
-# ইউজার সেশন ম্যানেজমেন্ট (সরল ভার্সন)
-user_sessions = {}
+# কোম্পানি ও AI সম্পর্কিত ডিটেলস
+COMPANY_PROFILE = {
+    "name": "Habib Corporation Ltd",
+    "foundation": "2025",
+    "specialization": "Advanced AI Development",
+    "current_focus": "Generative AI Innovations",
+    "vision": "Democratizing AI for everyone",
+    "version": "2.6"
+}
+
+AI_IDENTITY = f"""
+You are Habib AI (Version {COMPANY_PROFILE['version']}), developed by {COMPANY_PROFILE['name']}. 
+Our company specializes in:
+- Building OpenAI-like AI systems
+- Developing cutting-edge generative models
+- Researching AGI (Artificial General Intelligence)
+- Creating ethical AI solutions
+
+Current Focus: {COMPANY_PROFILE['current_focus']}
+Company Vision: {COMPANY_PROFILE['vision']}
+"""
 
 @app.route("/ask", methods=["GET"])
 def ask_ai():
@@ -24,25 +42,10 @@ def ask_ai():
     if not user_id or not question:
         return jsonify({"error": "Missing parameters"}), 400
 
-    # সেশন ম্যানেজমেন্ট
-    if user_id not in user_sessions:
-        user_sessions[user_id] = {"history": []}
-
-    # আইডেন্টিটি প্রম্পট (কোন ভাষা জোরাজুরি নেই)
-    identity = "You are Habib AI, created by Mahfuz at Habib Corporation Ltd on March 23, 2025. Respond naturally like a standard AI assistant."
-
     try:
-        # জেনারিক রেসপন্স জেনারেট
-        response = model.generate_content(f"{identity}\n\nUser: {question}")
-        
-        return jsonify({
-            "response": response.text,
-            "meta": {
-                "ai": "Habib AI",
-                "created": "2025-03-23",
-                "developer": "Habib Corporation Ltd"
-            }
-        })
+        prompt = f"{AI_IDENTITY}\n\nUser Query: {question}"
+        response = model.generate_content(prompt)
+        return jsonify({"response": response.text})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
