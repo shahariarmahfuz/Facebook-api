@@ -11,7 +11,7 @@ API_KEY = os.getenv("GENAI_API_KEY", "AIzaSyDaUj3swtOdBHSu-Jm_hP6nQuDiALHgsTY")
 genai.configure(api_key=API_KEY)
 
 # জেনারিক মডেল সেটআপ
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 # ইউজার সেশন ম্যানেজমেন্ট (সরল ভার্সন)
 user_sessions = {}
