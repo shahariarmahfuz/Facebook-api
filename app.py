@@ -3,7 +3,7 @@ import threading
 import time
 from datetime import datetime, timedelta
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import google.generativeai as genai
 from google.generativeai import types
 
@@ -142,6 +142,10 @@ def get_video_links():
     else:
         return jsonify({"error": "কোন ভিডিও লিংক পাওয়া যায়নি"}), 404
 
+@app.route('/')
+def home():
+    return render_template('home.html')
+    
 @app.route('/ping', methods=['GET'])
 def ping():
     return jsonify({"status": "alive", "timestamp": datetime.now().isoformat()})
