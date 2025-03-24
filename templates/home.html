@@ -493,6 +493,30 @@
                 card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
             });
         });
+
+        // Smooth scroll to features section when button is clicked
+        document.querySelector('.cta-button').addEventListener('click', (e) => {
+            e.preventDefault();
+            const featuresSection = document.querySelector('.features-section');
+            
+            // First scroll to the section
+            featuresSection.scrollIntoView({
+                behavior: 'smooth'
+            });
+            
+            // Then trigger animations on cards after a short delay
+            setTimeout(() => {
+                const cards = document.querySelectorAll('.feature-card');
+                cards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.style.transform = 'perspective(1000px) rotateX(-5deg)';
+                        setTimeout(() => {
+                            card.style.transform = 'perspective(1000px) rotateX(0)';
+                        }, 500);
+                    }, index * 200);
+                });
+            }, 800);
+        });
     </script>
 </body>
 </html>
