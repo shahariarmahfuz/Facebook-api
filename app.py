@@ -96,6 +96,52 @@ def ai_response():
     except Exception as e:
         return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
 
+# RapidAPI তথ্য
+RAPIDAPI_HOST = "facebook-reel-and-video-downloader.p.rapidapi.com"
+RAPIDAPI_KEY = "d4cc664bddmshad58db8819652d6p19e7adjsn6bcd66d66ef4"
+
+def fetch_video_links(fb_url):
+    """RapidAPI থেকে ভিডিও লিংক বের করা (শুধুমাত্র পাওয়া লিংকগুলো রিটার্ন করা)"""
+    url = f"https://{RAPIDAPI_HOST}/app/main.php?url={fb_url}"
+    headers = {
+        "x-rapidapi-host": RAPIDAPI_HOST,
+        "x-rapidapi-key": RAPIDAPI_KEY
+    }
+
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        data = response.json()
+        links = data.get("links", {})
+        
+        result = {}
+        # HD লিংক চেক করা
+        if "Download High Quality" in links:
+            result["hd_url"] = links["Download High Quality"]
+        
+        # SD লিংক চেক করা
+        if "Download Low Quality" in links:
+            result["sd_url"] = links["Download Low Quality"]
+        
+        return result if result else None
+    return None
+
+@app.route("/fb", methods=["GET"])
+def get_video_links():
+    """ফেসবুক ভিডিওর পাওয়া লিংকগুলো রিটার্ন করা"""
+    fb_url = request.args.get("link")
+    if not fb_url:
+        return jsonify({"error": "লিংক প্রদান করুন"}), 400
+
+    video_links = fetch_video_links(fb_url)
+    
+    if video_links:
+        return jsonify({
+            "status": "success",
+            "links": video_links
+        })
+    else:
+        return jsonify({"error": "কোন ভিডিও লিংক পাওয়া যায়নি"}), 404
+
 @app.route('/ping', methods=['GET'])
 def ping():
     return jsonify({"status": "alive", "timestamp": datetime.now().isoformat()})
