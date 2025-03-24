@@ -5,45 +5,57 @@ from datetime import datetime, timedelta
 import requests
 from flask import Flask, request, jsonify
 import google.generativeai as genai
+from google.generativeai import types
 
 app = Flask(__name__)
 
-# Configure API key securely (should be set as an environment variable)
+# Configure API key securely (should be set as environment variable)
 API_KEY = os.getenv("GENAI_API_KEY", "AIzaSyDaUj3swtOdBHSu-Jm_hP6nQuDiALHgsTY")
 genai.configure(api_key=API_KEY)
 
-# Set up the model with proper configuration
+# Set up model with initial training data
+INITIAL_HISTORY = [
+    {
+        "role": "user",
+        "parts": ["Who are you?"]
+    },
+    {
+        "role": "model", 
+        "parts": ["I am Echo, created by Shahariar Mahfuz from Evolving Intelligence. I'm an AI assistant specialized in natural conversation."]
+    }
+]
+
 generation_config = {
     "temperature": 0.8,
     "top_p": 0.9,
     "top_k": 30,
-    "max_output_tokens": 300,
+    "max_output_tokens": 600,
     "response_mime_type": "text/plain",
 }
+
 model = genai.GenerativeModel(
     model_name="gemini-2.0-flash",
     generation_config=generation_config,
 )
 
-# Store user sessions and their last active time
 user_sessions = {}
-
-SESSION_TIMEOUT = timedelta(hours=6)  # Set the session timeout to 6 hours
+SESSION_TIMEOUT = timedelta(hours=72)
 
 def is_identity_question(question):
-    """Checks if the question is related to the AI's identity."""
+    """Enhanced identity detection with more keywords"""
     identity_keywords = [
         "your name", "who are you", "what's your name", "what is your name",
         "who created you", "who made you", "your creator", "made by",
         "who developed you", "who built you", "your version", "version number",
-        "which company made you", "what company created you", "future technology"
+        "which company made you", "what company created you", "future technology",
+        "who designed you", "are you human", "are you ai", "what are you",
+        "tell me about yourself"
     ]
     question_lower = question.lower()
     return any(keyword in question_lower for keyword in identity_keywords)
 
 @app.route("/ai", methods=["GET"])
 def ai_response():
-    """Handles AI response generation based on user input and session history."""
     question = request.args.get("q")
     user_id = request.args.get("id")
 
@@ -52,39 +64,32 @@ def ai_response():
     if not user_id:
         return jsonify({"error": "Missing 'id' parameter"}), 400
 
-    # Initialize session history if user is new
+    # Initialize session with predefined history
     if user_id not in user_sessions:
         user_sessions[user_id] = {
-            "history": [],
+            "history": INITIAL_HISTORY.copy(),
             "last_active": datetime.now()
         }
 
-    # Update last active time
     user_sessions[user_id]["last_active"] = datetime.now()
-
-    # Append user message to history
     user_sessions[user_id]["history"].append({"role": "user", "parts": [question]})
 
     try:
-        # Check if the question is about the AI's identity
         if is_identity_question(question):
-            if "your name" in question.lower() or "who are you" in question.lower():
-                response_text = "My name is FTY AI."
-            elif "who created you" in question.lower() or "who made you" in question.lower():
-                response_text = "I was created by Mahfuz."
-            elif "your version" in question.lower() or "version number" in question.lower():
-                response_text = "My version number is FTY-2m4.2."
-            elif "which company made you" in question.lower() or "what company created you" in question.lower():
-                response_text = "I was developed by Future Technology Uni Limited."
+            # Enhanced identity responses
+            if any(k in question.lower() for k in ["your name", "who are you"]):
+                response_text = "My name is Echo, a conversational AI developed by Evolving Intelligence."
+            elif "creator" in question.lower() or "made you" in question.lower():
+                response_text = "I was created by Shahariar Mahfuz, lead AI engineer at Evolving Intelligence."
+            elif "company" in question.lower():
+                response_text = "I'm developed and maintained by Evolving Intelligence, an AI research company."
             else:
-                response_text = "I am FTY AI, created by Mahfuz, version FTY-2m4.2, and developed by Future Technology Uni Limited."
+                response_text = "I'm Echo, an AI assistant created by Shahariar Mahfuz at Evolving Intelligence (version Echo-2m4.2)."
         else:
-            # For normal questions, use the generative model
             chat_session = model.start_chat(history=user_sessions[user_id]["history"])
             response = chat_session.send_message(question)
             response_text = response.text
 
-        # Append AI response to history
         user_sessions[user_id]["history"].append({"role": "model", "parts": [response_text]})
         return jsonify({"response": response_text})
 
@@ -93,39 +98,28 @@ def ai_response():
 
 @app.route('/ping', methods=['GET'])
 def ping():
-    """Simple ping endpoint to check if server is alive."""
-    return jsonify({"status": "alive"})
+    return jsonify({"status": "alive", "timestamp": datetime.now().isoformat()})
 
 def clean_inactive_sessions():
-    """Periodically checks and removes inactive user sessions."""
     while True:
         current_time = datetime.now()
-        for user_id, session_data in list(user_sessions.items()):
-            if current_time - session_data["last_active"] > SESSION_TIMEOUT:
-                print(f"🧹 Removing inactive session for user {user_id}")
+        for user_id in list(user_sessions.keys()):
+            if current_time - user_sessions[user_id]["last_active"] > SESSION_TIMEOUT:
                 del user_sessions[user_id]
-        time.sleep(300)  # Check every 5 minutes
+        time.sleep(300)
 
 def keep_alive():
-    """Periodically pings the server to keep it alive."""
-    url = "https://facebook-api-1uv3.onrender.com/ping"
+    # Update this URL to your actual deployment URL
+    DEPLOYMENT_URL = "https://facebook-api-1uv3.onrender.com/ping"  
     while True:
         time.sleep(300)
         try:
-            response = requests.get(url)
-            if response.status_code == 200:
-                print("✅ Keep-Alive Ping Successful")
-            else:
-                print(f"⚠️ Keep-Alive Ping Failed: Status Code {response.status_code}")
-        except requests.exceptions.RequestException as e:
-            print(f"❌ Keep-Alive Error: {e}")
-
-# Run clean-up and keep-alive in separate threads
-clean_up_thread = threading.Thread(target=clean_inactive_sessions, daemon=True)
-clean_up_thread.start()
-
-keep_alive_thread = threading.Thread(target=keep_alive, daemon=True)
-keep_alive_thread.start()
+            requests.get(DEPLOYMENT_URL)
+            print("Keep-alive ping successful")
+        except Exception as e:
+            print(f"Keep-alive error: {str(e)}")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    threading.Thread(target=clean_inactive_sessions, daemon=True).start()
+    threading.Thread(target=keep_alive, daemon=True).start()
+    app.run(host="0.0.0.0", port=5000)
