@@ -10,7 +10,7 @@ from google.generativeai import types
 app = Flask(__name__)
 
 # Configure API key securely (should be set as environment variable)
-API_KEY = os.getenv("GENAI_API_KEY", "AIzaSyDaUj3swtOdBHSu-Jm_hP6nQuDiALHgsTY")
+API_KEY = os.getenv("GENAI_API_KEY", "AIzaSyBMNhMXZRitaMHtfzWi8WuB9BpxKeiXrok")
 genai.configure(api_key=API_KEY)
 
 # Set up model with initial training data
