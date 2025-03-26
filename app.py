@@ -9,11 +9,33 @@ from google.generativeai import types
 
 app = Flask(__name__)
 
-# Configure API key securely (should be set as environment variable)
-API_KEY = os.getenv("GENAI_API_KEY", "AIzaSyBMNhMXZRitaMHtfzWi8WuB9BpxKeiXrok")
-genai.configure(api_key=API_KEY)
+# মাল্টিপল API keys লিস্ট
+API_KEYS = [
+    "AIzaSyBMNhMXZRitaMHtfzWi8WuB9BpxKeiXrok",
+    "AIzaSyAbuuYt4H3GfRc24Piod6TckCw64mZXH8I",
+    "AIzaSyBTyMOEXRq-CA7ITiah6YBd-w8zdMj5UF0",
+    # আরও API keys এখানে যোগ করুন
+]
 
-# Set up model with initial training data
+current_key_index = 0
+key_lock = threading.Lock()
+
+def get_next_api_key():
+    global current_key_index
+    with key_lock:
+        current_key = API_KEYS[current_key_index]
+        current_key_index = (current_key_index + 1) % len(API_KEYS)
+        print(f"Using API Key: {current_key} (Index: {current_key_index})")  # কোন key ব্যবহার করা হচ্ছে তা প্রিন্ট
+    return current_key
+
+generation_config = {
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "top_k": 30,
+    "max_output_tokens": 600,
+    "response_mime_type": "text/plain",
+}
+
 INITIAL_HISTORY = [
     {
         "role": "user",
@@ -24,19 +46,6 @@ INITIAL_HISTORY = [
         "parts": ["I am Echo, created by Shahariar Mahfuz from Evolving Intelligence. I'm an AI assistant specialized in natural conversation."]
     }
 ]
-
-generation_config = {
-    "temperature": 0.8,
-    "top_p": 0.9,
-    "top_k": 30,
-    "max_output_tokens": 600,
-    "response_mime_type": "text/plain",
-}
-
-model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash",
-    generation_config=generation_config,
-)
 
 user_sessions = {}
 SESSION_TIMEOUT = timedelta(hours=72)
@@ -86,6 +95,14 @@ def ai_response():
             else:
                 response_text = "I'm Echo, an AI assistant created by Shahariar Mahfuz at Evolving Intelligence (version Echo-2m4.2)."
         else:
+            current_api_key = get_next_api_key()
+            genai.configure(api_key=current_api_key)
+            
+            model = genai.GenerativeModel(
+                model_name="gemini-2.0-flash",
+                generation_config=generation_config,
+            )
+            
             chat_session = model.start_chat(history=user_sessions[user_id]["history"])
             response = chat_session.send_message(question)
             response_text = response.text
@@ -159,7 +176,6 @@ def clean_inactive_sessions():
         time.sleep(300)
 
 def keep_alive():
-    # Update this URL to your actual deployment URL
     DEPLOYMENT_URL = "https://facebook-api-1uv3.onrender.com/ping"  
     while True:
         time.sleep(300)
@@ -170,6 +186,9 @@ def keep_alive():
             print(f"Keep-alive error: {str(e)}")
 
 if __name__ == "__main__":
+    print("Starting server with API key rotation...")
+    print(f"Total API keys available: {len(API_KEYS)}")
+    
     threading.Thread(target=clean_inactive_sessions, daemon=True).start()
     threading.Thread(target=keep_alive, daemon=True).start()
     app.run(host="0.0.0.0", port=5000)
