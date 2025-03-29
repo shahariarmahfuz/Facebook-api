@@ -165,7 +165,7 @@ def home():
     
 @app.route('/ping', methods=['GET'])
 def ping():
-    return jsonify({"status": "alive", "timestamp": datetime.now().isoformat()})
+    return jsonify({"status": "alive"})
 
 def clean_inactive_sessions():
     while True:
@@ -175,20 +175,9 @@ def clean_inactive_sessions():
                 del user_sessions[user_id]
         time.sleep(300)
 
-def keep_alive():
-    DEPLOYMENT_URL = "https://facebook-api-1uv3.onrender.com/ping"  
-    while True:
-        time.sleep(300)
-        try:
-            requests.get(DEPLOYMENT_URL)
-            print("Keep-alive ping successful")
-        except Exception as e:
-            print(f"Keep-alive error: {str(e)}")
-
 if __name__ == "__main__":
     print("Starting server with API key rotation...")
     print(f"Total API keys available: {len(API_KEYS)}")
     
     threading.Thread(target=clean_inactive_sessions, daemon=True).start()
-    threading.Thread(target=keep_alive, daemon=True).start()
     app.run(host="0.0.0.0", port=5000)
